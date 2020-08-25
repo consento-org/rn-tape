@@ -7,6 +7,30 @@ _Like airtap but with support for react-native/expo_
 npm i -g rn-tape
 
 rn-tape run android ./
+
+rn-tape --help run
+
+rn-tape run <system> [location] [test]
+
+Run your package's tests in react-natives
+
+Positionals:
+  location  The path to the package you wish to test
+                                                                 [default: "./"]
+  test      A relative path within your package to its test entry point
+                                                              [default: "/test"]
+  system    The system you want to run the tests on
+                                  [required] [choices: "android", "ios", "expo"]
+
+Options:
+  --version    Show version number                                     [boolean]
+  --help       Show help                                               [boolean]
+  --accessKey  Your bowserstack access key if you plan on using Browserstack
+  --user       Your browserstack username if you plan on using Browserstack.
+               Specifying this will eanble testing with Browserstack
+  --device     The device you wish you run Browserstack tests on
+  --osVersion  The OS Version for the device you wish to run Browserstack tests
+               on
 ```
 
 ## About
@@ -42,5 +66,5 @@ _Note: As far as unit-test frameworks are concerned: many node/javascript librar
 - Before compiling, the CLI will start an HTTP server which will be connected to via [NGROK](https://ngrok.com/)
 - Logs from the app will be sent to the HTTP server, and will be displayed in the CLI
 - It will then either run the app in browserstack or locally
-- For browserstack support, you'll need to add the `BROWSERSTACK_USER` and `BROWSERSTACK_ACCESS_KEY` environment variables
+- For browserstack support, you'll need to add the `BROWSERSTACK_USER` and `BROWSERSTACK_ACCESS_KEY` environment variables, or use the `--user` and `--accessKey` CLI options.
 - Once the app has finished sending all the data over, everything will be closed.

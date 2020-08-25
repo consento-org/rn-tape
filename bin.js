@@ -13,26 +13,51 @@ const { writeFile, mkdir } = require('fs').promises
 const yargs = require('yargs')
 
 yargs.command('run <system> [location] [test]', 'Run your package\'s tests in react-natives', (args) => {
-  args.positional('location', {
-    describe: 'The path to the package you wish to test',
-    default: process.cwd()
-  })
-  .positional('test', {
-    describe: 'A relative path within your package to its test entry point',
-    default: '/test'
-  })
-  .positional('system', {
-    describe: 'The system you want to run the tests on',
-    choices: ['android', 'ios', 'expo']
-  })
-}, async ({ location, test, system }) => {
+  args
+    .positional('system', {
+      describe: 'The system you want to run the tests on',
+      choices: ['android', 'ios', 'expo']
+    })
+    .positional('location', {
+      describe: 'The path to the package you wish to test',
+      default: process.cwd()
+    })
+    .positional('test', {
+      describe: 'A relative path within your package to its test entry point',
+      default: '/test'
+    })
+    .option('accessKey', {
+      describe: 'Your bowserstack access key if you plan on using Browserstack',
+      default: process.env.BROWSERSTACK_ACCESS_KEY
+    })
+    .option('user', {
+      describe: 'Your browserstack username if you plan on using Browserstack. Specifying this will eanble testing with Browserstack',
+      default: process.env.BROWSERSTACK_USER
+    })
+    .option('device', {
+      describe: 'The device you wish you run Browserstack tests on',
+      default: process.env.BROWSERSTACK_DEVICE
+    })
+    .option('osVersion', {
+      describe: 'The OS Version for the device you wish to run Browserstack tests on',
+      default: process.env.BROWSERSTACK_OS_VERSION
+    })
+}, async ({
+  location,
+  test,
+  system,
+  accessKey,
+  user,
+  device,
+  osVersion
+}) => {
   const packageLocation = path.resolve(process.cwd(), location)
   const packageJSON = require(path.join(packageLocation, 'package.json'))
 
   try {
     const bs = {
-      user: process.env.BROWSERSTACK_USER,
-      key: process.env.BROWSERSTACK_ACCESS_KEY
+      user: user,
+      key: accessKey
     }
     const browserStack = bs.user !== undefined
     const android = system === 'android'
@@ -45,7 +70,6 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
 
     const runId = process.env.GITHUB_RUN_ID || 'dirty'
 
-    let device = process.env.BROWSERSTACK_DEVICE
     if (!device) {
       if (!ios) {
         device = 'Google Pixel 3'
@@ -54,7 +78,6 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       }
     }
 
-    let osVersion = process.env.BROWSERSTACK_OS_VERSION
     if (!osVersion) {
       if (!ios) {
         osVersion = '9.0'
