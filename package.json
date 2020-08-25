@@ -3,6 +3,7 @@
   "version": "1.0.0-0",
   "description": "_Like airtap but with support for react-native/expo_",
   "main": "bin.js",
+  "bin": "bin.js",
   "directories": {
     "lib": "lib"
   },
