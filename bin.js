@@ -102,7 +102,8 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     const target = path.join(root, 'node_modules', packageJSON.name)
     try {
       // We should delete it if it already exists.
-      await del(target)
+      // Force:true is needed in case we rn-tape is installed globally
+      await del(target, {force: true})
       console.log(`## react-native:clearing-old-dep [target=${target}]`)
     } catch (err) {
       if (err.code !== 'ENOTDIR') {
