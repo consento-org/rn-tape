@@ -38,7 +38,7 @@ bower_components
 build/Release
 
 # Dependency directories
-node_modules/
+node_modules
 jspm_packages/
 
 # TypeScript v1 declaration files
@@ -145,7 +145,7 @@ local.properties
 
 # node.js
 #
-node_modules/
+node_modules
 npm-debug.log
 yarn-error.log
 
@@ -174,7 +174,6 @@ rntape/ios/Pods/
 expotape/ios/Pods/
 
 ## Taken from expotape gitignore
-node_modules/**/*
 .expo/*
 npm-debug.*
 *.jks
