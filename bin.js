@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 const wd = require('wd')
 const { logExec, exec } = require('./lib/exec.js')
-const { execSync } = require('child_process')
 const del = require('del')
 const path = require('path')
 const ngrok = require('ngrok')
@@ -9,8 +8,10 @@ const { fetch, Headers } = require('cross-fetch')
 const FormData = require('form-data')
 const { createServer } = require('http')
 const { createReadStream } = require('fs')
-const { writeFile, mkdir } = require('fs').promises
+const { writeFile } = require('fs').promises
 const yargs = require('yargs')
+const mkdirp = require('mkdirp')
+const cprCB = require('cpr')
 
 yargs.command('run <system> [location] [test]', 'Run your package\'s tests in react-natives', (args) => {
   args
@@ -42,6 +43,9 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       describe: 'The OS Version for the device you wish to run Browserstack tests on',
       default: process.env.BROWSERSTACK_OS_VERSION
     })
+    .option('verbose', {
+      describe: 'Whether to log additional logs from different processes'
+    })
 }, async ({
   location,
   test,
@@ -49,7 +53,8 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
   accessKey,
   user,
   device,
-  osVersion
+  osVersion,
+  verbose
 }) => {
   const packageLocation = path.resolve(process.cwd(), location)
   const packageJSON = require(path.join(packageLocation, 'package.json'))
@@ -103,7 +108,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     try {
       // We should delete it if it already exists.
       // Force:true is needed in case we rn-tape is installed globally
-      await del(target, {force: true})
+      await del(target, { force: true })
       console.log(`## react-native:clearing-old-dep [target=${target}]`)
     } catch (err) {
       if (err.code !== 'ENOTDIR') {
@@ -118,7 +123,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     await writeFile(`${root}/package.json`, JSON.stringify(rnPkg, null, 2) + '\n')
     try {
       // Install any dependencies of the wrapper app
-      await logExec('npm', ['i'], { cwd: root })
+      await logExec('npm', ['i'], { cwd: root, quiet: !verbose })
     } finally {
       // Add the package name to dependencies so it will compile
       rnPkg.dependencies[packageJSON.name] = ''
@@ -127,11 +132,15 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
 
     // Make sure the folder exists for copying over the package
     console.log(`## react-native:preparing-dep [target=${target}]`)
-    await mkdir(path.dirname(target), { recursive: true })
+    await mkdirp(path.dirname(target))
 
     // Copy over the package contents
-    console.log(`## react-native:copy-build [src=./dist target=${target}]`)
-    execSync(`cp -r ${packageLocation} ${target}`)
+    console.log(`## react-native:copy-build [src=${packageLocation} target=${target}]`)
+
+    await cpr(packageLocation, target, { 
+      // Avoid recursive copying
+      filter: (item) => !item.startsWith(__dirname + '/')
+    })
 
     // Start up the local server that will be used to collect logs
     // Logs will be sent in a single HTTP request
@@ -190,7 +199,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       // If we're running on Android, build the APK for it
       if (android) {
         console.log('## react-native:build:android')
-        await logExec('./gradlew', ['assembleRelease'], { cwd: `${root}/android` })
+        await logExec('./gradlew', ['assembleRelease'], { cwd: `${root}/android`, quiet: !verbose })
         buildDetails = {
           app: `${root}/android/app/build/outputs/apk/release/app-release.apk`,
           capabilities: {
@@ -229,9 +238,9 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
 
       if (ios) {
         console.log('## react-native:build:ios:pod')
-        await logExec('pod', ['install', '--clean-install'], { cwd: `${root}/ios` })
+        await logExec('pod', ['install', '--clean-install'], { cwd: `${root}/ios`, quiet: !verbose })
         console.log('## react-native:build:ios:app')
-        console.log(execSync(`mkdir -p ${root}/ios/build`).toString())
+        await mkdirp(`${root}/ios/build`)
         await logExec(
           'xcodebuild',
           [
@@ -247,14 +256,14 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
             'CODE_SIGN_ENTITLEMENTS=""',
             'CODE_SIGNING_ALLOWED="NO"'
           ],
-          { cwd: `${root}/ios` }
+          { cwd: `${root}/ios`, quiet: !verbose }
         )
         console.log('## react-native:build:ios:ipa')
-        await logExec('rm', ['-rf', 'ipa'], { cwd: `${root}/ios/build` })
-        await logExec('mkdir', ['-p', 'build/ipa/Payload'], { cwd: `${root}/ios` })
-        await logExec('cp', ['-r', 'build/Build/Products/Release-iphoneos/rntape.app', 'build/ipa/Payload/rntape.app'], { cwd: `${root}/ios` })
-        await logExec('rm', ['-f', 'rntape-1.ipa'], { cwd: `${root}/ios/build` })
-        await logExec('zip', ['-r', '../rntape-1.ipa', 'Payload'], { cwd: `${root}/ios/build/ipa` })
+        await logExec('rm', ['-rf', 'ipa'], { cwd: `${root}/ios/build`, quiet: !verbose })
+        await mkdirp(`${root}/ios/build/ipa/Payload`)
+        await logExec('cp', ['-r', 'build/Build/Products/Release-iphoneos/rntape.app', 'build/ipa/Payload/rntape.app'], { cwd: `${root}/ios`, quiet: !verbose })
+        await logExec('rm', ['-f', 'rntape-1.ipa'], { cwd: `${root}/ios/build`, quiet: !verbose })
+        await logExec('zip', ['-r', '../rntape-1.ipa', 'Payload'], { cwd: `${root}/ios/build/ipa`, quiet: !verbose })
         buildDetails = {
           app: `${root}/ios/build/rntape-1.ipa`,
           capabilities: {
@@ -312,7 +321,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       } else {
         if (android) {
           console.log('## react-native:install')
-          await logExec('adb', ['install', '-r', 'app/build/outputs/apk/release/app-release.apk'], { cwd: `${root}/android` })
+          await logExec('adb', ['install', '-r', 'app/build/outputs/apk/release/app-release.apk'], { cwd: `${root}/android`, quiet: !verbose })
           console.log('## MANUAL ACTION REQUIRED: open the react-native app "rntape" on the device.')
         } else {
           console.log('## MANUAL ACTION REQUIRED: Install the app and start it')
@@ -382,5 +391,13 @@ function createServerAsync (listener, port) {
     server.once('error', finish)
     server.once('listening', finish)
     server.listen(port)
+  })
+}
+function cpr (origin, target, opts) {
+  return new Promise((resolve, reject) => {
+    cprCB(origin, target, opts, (err) => {
+      if (err) reject(err)
+      else resolve()
+    })
   })
 }
