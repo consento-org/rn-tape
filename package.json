@@ -1,6 +1,6 @@
 {
   "name": "rn-tape",
-  "version": "1.0.0-2",
+  "version": "1.0.0-3",
   "description": "_Like airtap but with support for react-native/expo_",
   "main": "bin.js",
   "bin": "bin.js",
