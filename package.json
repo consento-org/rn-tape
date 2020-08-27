@@ -1,0 +1,40 @@
+{
+  "name": "rn-tape",
+  "version": "1.0.0-2",
+  "description": "_Like airtap but with support for react-native/expo_",
+  "main": "bin.js",
+  "bin": "bin.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/consento-org/rn-tape.git"
+  },
+  "keywords": [
+    "tape",
+    "react",
+    "native",
+    "RN",
+    "test",
+    "runner"
+  ],
+  "author": "Martin Heidegger <martin.heidegger@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/consento-org/rn-tape/issues"
+  },
+  "homepage": "https://github.com/consento-org/rn-tape#readme",
+  "dependencies": {
+    "cpr": "^3.0.1",
+    "cross-fetch": "^3.0.5",
+    "del": "^5.1.0",
+    "mkdirp": "^1.0.4",
+    "ngrok": "^3.2.7",
+    "wd": "^1.12.1",
+    "yargs": "^15.4.1"
+  }
+}

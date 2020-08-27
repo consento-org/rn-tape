@@ -1,6 +1,53 @@
 # rn-tape
 _Like airtap but with support for react-native/expo_
 
+## Usage
+
+`rn-tape` is a `node-js` command-line tool that you can download/install/access through `npm`.
+
+You can use it quickly and directly using `npx` _(comes with node)_
+
+```sh
+$ npx rn-tape run android ./
+```
+
+In a project it is recommended to add it as a development dependency, this way it is clear which
+version of `rn-tape` works for testing your work.
+
+```sh
+$ npm install rn-tape --save-dev
+```
+
+For detailed usage information you can question the help:
+
+```sh
+$ npx rn-tape --help run
+
+rn-tape run <system> [location] [test]
+
+Run your package's tests in react-natives
+
+Positionals:
+  location  The path to the package you wish to test
+                                                                 [default: "./"]
+  test      A relative path within your package to its test entry point
+                                                              [default: "/test"]
+  system    The system you want to run the tests on
+                                  [required] [choices: "android", "ios", "expo"]
+
+Options:
+  --version    Show version number                                     [boolean]
+  --help       Show help                                               [boolean]
+  --accessKey  Your bowserstack access key if you plan on using Browserstack
+  --user       Your browserstack username if you plan on using Browserstack.
+               Specifying this will eanble testing with Browserstack
+  --device     The device you wish you run Browserstack tests on
+  --osVersion  The OS Version for the device you wish to run Browserstack tests
+               on
+```
+
+## About
+
 :wave: Hi! so we have been working on testing react-native libraries (specifically native ones) - actual - devices in a Continuous integration context. In other words: Automatically test every push to github if it works on all devices.
 
 If you look at react-native libraries out there you might notice that most of them do not include CI tests _(its rare to see any)_ but more importantly most of the non-react-native libraries _(general npm libraries)_ are not tested for react-native. Which breaks quite a few and makes the setup process really stressful.
@@ -22,3 +69,15 @@ We are looking for people to:
 We will be working on this repository in the next weeks: Ask questions [using issues](https://github.com/consento-org/rn-tape/issues/new)
 
 _Note: As far as unit-test frameworks are concerned: many node/javascript libraries use [tape](https://github.com/substack/tape) (particularly in the dat community). But tape does not work out-of-the-box with react-native, which is why Martin is maintaining a slightly fixed fork of tape that works with react-native: [fresh-tape](https://github.com/martinheidegger/fresh-tape)._
+
+## How it Works
+
+- This repo contains a React-Native project which runs your test code
+- The CLI will compile your code with babel and put it in a temporary folder
+- Your code will be set up as a dependency of this project.
+- The project is then compiled with react-native to generate an IPA or APK
+- Before compiling, the CLI will start an HTTP server which will be connected to via [NGROK](https://ngrok.com/)
+- Logs from the app will be sent to the HTTP server, and will be displayed in the CLI
+- It will then either run the app in browserstack or locally
+- For browserstack support, you'll need to add the `BROWSERSTACK_USER` and `BROWSERSTACK_ACCESS_KEY` environment variables, or use the `--user` and `--accessKey` CLI options.
+- Once the app has finished sending all the data over, everything will be closed.
