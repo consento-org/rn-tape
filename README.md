@@ -3,12 +3,25 @@ _Like airtap but with support for react-native/expo_
 
 ## Usage
 
+`rn-tape` is a `node-js` command-line tool that you can download/install/access through `npm`.
+
+You can use it quickly and directly using `npx` _(comes with node)_
+
+```sh
+$ npx rn-tape run android ./
 ```
-npm i -g rn-tape
 
-rn-tape run android ./
+In a project it is recommended to add it as a development dependency, this way it is clear which
+version of `rn-tape` works for testing your work.
 
-rn-tape --help run
+```sh
+$ npm install rn-tape --save-dev
+```
+
+For detailed usage information you can question the help:
+
+```sh
+$ npx rn-tape --help run
 
 rn-tape run <system> [location] [test]
 
