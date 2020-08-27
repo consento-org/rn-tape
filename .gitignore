@@ -1,3 +1,5 @@
+# This .gitignore combines the default Node.js ignore from github, the expo ignore, an react-native ignore statments
+
 # Logs
 logs
 *.log

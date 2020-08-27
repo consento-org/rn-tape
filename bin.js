@@ -137,9 +137,9 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // Copy over the package contents
     console.log(`## react-native:copy-build [src=${packageLocation} target=${target}]`)
 
-    await cpr(packageLocation, target, { 
+    await cpr(packageLocation, target, {
       // Avoid recursive copying
-      filter: (item) => !item.startsWith(__dirname + '/')
+      filter: (item) => !item.startsWith(`${__dirname}/`)
     })
 
     // Start up the local server that will be used to collect logs
@@ -219,12 +219,14 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
         xdl.Project.getBuildStatusAsync(
           '.',
           { platform: 'android', current: false }
-        ).then(
-          data =>
+        ).then(data => {
+            if(!data.jobs) return
+            const results = data.jobs.filter(job => job.id === '${build}')
+            if(!results.length) return
             console.log(
-              data.jobs?.filter(job => job.id === '${build}')[0]?.artifacts.url
+              results[0].artifacts.url
             )
-        )
+        })
       `], { cwd: root }).promise()).trim()
         console.log({ app })
         buildDetails = {
