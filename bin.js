@@ -126,29 +126,35 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // Install any dependencies of the wrapper app
     await logExec('npm', ['i'], { cwd: root, quiet: !verbose })
 
+    console.log('## react-native:npm pre-pack')
+
     // Merge devDependencies with dependencies
     const { dependencies = {}, devDependencies = {} } = packageJSON
     const combinedDeps = { ...dependencies, ...devDependencies }
     const modifiedPackageJSON = { ...packageJSON, dependencies: combinedDeps }
     await writeFile(packageJSONLocation, JSON.stringify(modifiedPackageJSON))
 
+    console.log('## react-native:npm pack')
+
     // Pack up package
     await logExec('npm', ['pack'], {
-      cwd: target,
+      cwd: packageLocation,
       quiet: !verbose
     })
 
     // Get a reference to the tar file
-    const packageFiles = await readdir(target)
+    const packageFiles = await readdir(packageLocation)
     const matchTargz = new RegExp(`^${packageJSON.name}-.*\\.tgz$`)
     const tarName = packageFiles.find((name) => name.match(matchTargz))
 
     if (!tarName) throw new Error('Tar file for package could not be generated')
 
-    const tarPath = path.join(target, tarName)
+    const tarPath = path.join(packageLocation, tarName)
 
     // Restore old package.json
     await writeFile(packageJSONLocation, packageRaw)
+
+    console.log('## react-native:npm install .tgz')
 
     // Install from pack file
     await logExec('npm', ['i', tarPath], {
