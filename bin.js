@@ -8,10 +8,9 @@ const { fetch, Headers } = require('cross-fetch')
 const FormData = require('form-data')
 const { createServer } = require('http')
 const { createReadStream } = require('fs')
-const { writeFile } = require('fs').promises
+const { writeFile, readFile, readdir, unlink } = require('fs').promises
 const yargs = require('yargs')
 const mkdirp = require('mkdirp')
-const cprCB = require('cpr')
 
 yargs.command('run <system> [location] [test]', 'Run your package\'s tests in react-natives', (args) => {
   args
@@ -57,7 +56,9 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
   verbose
 }) => {
   const packageLocation = path.resolve(process.cwd(), location)
-  const packageJSON = require(path.join(packageLocation, 'package.json'))
+  const packageJSONLocation = path.join(packageLocation, 'package.json')
+  const packageRaw = await readFile(packageJSONLocation, 'utf8')
+  const packageJSON = JSON.parse(packageRaw)
 
   try {
     const bs = {
@@ -121,26 +122,41 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // Add the raw package.json template
     const rnPkg = require(`${root}/template-package.json`)
     await writeFile(`${root}/package.json`, JSON.stringify(rnPkg, null, 2) + '\n')
-    try {
-      // Install any dependencies of the wrapper app
-      await logExec('npm', ['i'], { cwd: root, quiet: !verbose })
-    } finally {
-      // Add the package name to dependencies so it will compile
-      rnPkg.dependencies[packageJSON.name] = ''
-      await writeFile(`${root}/package.json`, JSON.stringify(rnPkg, null, 2) + '\n')
-    }
 
-    // Make sure the folder exists for copying over the package
-    console.log(`## react-native:preparing-dep [target=${target}]`)
-    await mkdirp(path.dirname(target))
+    // Install any dependencies of the wrapper app
+    await logExec('npm', ['i'], { cwd: root, quiet: !verbose })
 
-    // Copy over the package contents
-    console.log(`## react-native:copy-build [src=${packageLocation} target=${target}]`)
+    // Merge devDependencies with dependencies
+    const { dependencies = {}, devDependencies = {} } = packageJSON
+    const combinedDeps = { ...dependencies, ...devDependencies }
+    const modifiedPackageJSON = { ...packageJSON, dependencies: combinedDeps }
+    await writeFile(packageJSONLocation, JSON.stringify(modifiedPackageJSON))
 
-    await cpr(packageLocation, target, {
-      // Avoid recursive copying
-      filter: (item) => !item.startsWith(`${__dirname}/`)
+    // Pack up package
+    await logExec('npm', ['pack'], {
+      cwd: target,
+      quiet: !verbose
     })
+
+    // Get a reference to the tar file
+    const packageFiles = await readdir(target)
+    const matchTargz = new RegExp(`^${packageJSON.name}-.*\\.tgz$`)
+    const tarName = packageFiles.find((name) => name.match(matchTargz))
+
+    if (!tarName) throw new Error('Tar file for package could not be generated')
+
+    const tarPath = path.join(target, tarName)
+
+    // Restore old package.json
+    await writeFile(packageJSONLocation, packageRaw)
+
+    // Install from pack file
+    await logExec('npm', ['i', tarPath], {
+      cwd: root, quiet: !verbose
+    })
+
+    // Delete pack file
+    await unlink(tarPath)
 
     // Start up the local server that will be used to collect logs
     // Logs will be sent in a single HTTP request
@@ -228,7 +244,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
             )
         })
       `], { cwd: root }).promise()).trim()
-        console.log({ app })
+        if (verbose) console.log({ app })
         buildDetails = {
           appUrl: app,
           capabilities: {
@@ -393,13 +409,5 @@ function createServerAsync (listener, port) {
     server.once('error', finish)
     server.once('listening', finish)
     server.listen(port)
-  })
-}
-function cpr (origin, target, opts) {
-  return new Promise((resolve, reject) => {
-    cprCB(origin, target, opts, (err) => {
-      if (err) reject(err)
-      else resolve()
-    })
   })
 }
