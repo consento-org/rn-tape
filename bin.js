@@ -8,7 +8,7 @@ const { fetch, Headers } = require('cross-fetch')
 const FormData = require('form-data')
 const { createServer } = require('http')
 const { createReadStream } = require('fs')
-const { writeFile, readFile, readdir, unlink } = require('fs').promises
+const { writeFile, readFile, unlink } = require('fs').promises
 const yargs = require('yargs')
 const mkdirp = require('mkdirp')
 
@@ -136,33 +136,32 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
 
     console.log('## react-native:npm pack')
 
+    try {
     // Pack up package
-    await logExec('npm', ['pack'], {
-      cwd: packageLocation,
-      quiet: !verbose
-    })
+      await logExec('npm', ['pack'], {
+        cwd: packageLocation,
+        quiet: !verbose
+      })
+    } finally {
+    // Restore old package.json
+      await writeFile(packageJSONLocation, packageRaw)
+    }
 
     // Get a reference to the tar file
-    const packageFiles = await readdir(packageLocation)
-    const matchTargz = new RegExp(`^${packageJSON.name}-.*\\.tgz$`)
-    const tarName = packageFiles.find((name) => name.match(matchTargz))
-
-    if (!tarName) throw new Error('Tar file for package could not be generated')
-
+    const tarName = `${packageJSON.name}-${packageJSON.version}.tgz`
     const tarPath = path.join(packageLocation, tarName)
 
-    // Restore old package.json
-    await writeFile(packageJSONLocation, packageRaw)
+    try {
+      console.log('## react-native:npm install .tgz')
 
-    console.log('## react-native:npm install .tgz')
-
-    // Install from pack file
-    await logExec('npm', ['i', tarPath], {
-      cwd: root, quiet: !verbose
-    })
-
+      // Install from pack file
+      await logExec('npm', ['i', tarPath], {
+        cwd: root, quiet: !verbose
+      })
+    } finally {
     // Delete pack file
-    await unlink(tarPath)
+      await unlink(tarPath)
+    }
 
     // Start up the local server that will be used to collect logs
     // Logs will be sent in a single HTTP request
