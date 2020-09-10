@@ -29,7 +29,6 @@
   },
   "homepage": "https://github.com/consento-org/rn-tape#readme",
   "dependencies": {
-    "cpr": "^3.0.1",
     "cross-fetch": "^3.0.5",
     "del": "^5.1.0",
     "mkdirp": "^1.0.4",
