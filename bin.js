@@ -153,6 +153,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // Merge devDependencies with dependencies
     const { dependencies = {}, devDependencies = {} } = packageJSON
     const combinedDeps = { ...dependencies, ...devDependencies }
+    delete combinedDeps['rn-tape']
 
     const toInstall = Object.keys(combinedDeps).map((name) => {
       const version = combinedDeps[name]
