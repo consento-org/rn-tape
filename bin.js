@@ -126,26 +126,13 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // Install any dependencies of the wrapper app
     await logExec('npm', ['i'], { cwd: root, quiet: !verbose })
 
-    console.log('## react-native:npm pre-pack')
-
-    // Merge devDependencies with dependencies
-    const { dependencies = {}, devDependencies = {} } = packageJSON
-    const combinedDeps = { ...dependencies, ...devDependencies }
-    const modifiedPackageJSON = { ...packageJSON, dependencies: combinedDeps }
-    await writeFile(packageJSONLocation, JSON.stringify(modifiedPackageJSON))
-
     console.log('## react-native:npm pack')
 
-    try {
     // Pack up package
-      await logExec('npm', ['pack'], {
-        cwd: packageLocation,
-        quiet: !verbose
-      })
-    } finally {
-    // Restore old package.json
-      await writeFile(packageJSONLocation, packageRaw)
-    }
+    await logExec('npm', ['pack'], {
+      cwd: packageLocation,
+      quiet: !verbose
+    })
 
     // Get a reference to the tar file
     const tarName = `${packageJSON.name}-${packageJSON.version}.tgz`
@@ -162,6 +149,22 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // Delete pack file
       await unlink(tarPath)
     }
+
+    // Merge devDependencies with dependencies
+    const { dependencies = {}, devDependencies = {} } = packageJSON
+    const combinedDeps = { ...dependencies, ...devDependencies }
+
+    const toInstall = Object.keys(combinedDeps).map((name) => {
+      const version = combinedDeps[name]
+      return `${name}@${version}`
+    })
+
+    console.log('## react-native:npm install sub-dependencies')
+
+    // Install from pack file
+    await logExec('npm', ['i'].concat(toInstall), {
+      cwd: root, quiet: !verbose
+    })
 
     // Start up the local server that will be used to collect logs
     // Logs will be sent in a single HTTP request
