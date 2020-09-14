@@ -150,19 +150,24 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       await unlink(tarPath)
     }
 
+    console.log('## react-native:npm install sub-dependencies')
+
     // Merge devDependencies with dependencies
     const { dependencies = {}, devDependencies = {} } = packageJSON
     const combinedDeps = { ...dependencies, ...devDependencies }
+
+    // We shouldn't install ourselves
     delete combinedDeps['rn-tape']
 
+    // List all depnendencies of the project so we can install them at the top level
     const toInstall = Object.keys(combinedDeps).map((name) => {
       const version = combinedDeps[name]
       return `${name}@${version}`
     })
 
-    console.log('## react-native:npm install sub-dependencies')
-
-    // Install from pack file
+    // Install dependencies at the top level
+    // This needs to be done for react-native linking to work correctly
+    // Also needs to be done so that any dev dependencies get installed for running tests
     await logExec('npm', ['i'].concat(toInstall), {
       cwd: root, quiet: !verbose
     })
