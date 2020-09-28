@@ -12,6 +12,8 @@ const { writeFile, readFile, unlink } = require('fs').promises
 const yargs = require('yargs')
 const mkdirp = require('mkdirp')
 
+const DEFAULT_TIMEOUT = 90
+
 yargs.command('run <system> [location] [test]', 'Run your package\'s tests in react-natives', (args) => {
   args
     .positional('system', {
@@ -42,6 +44,10 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       describe: 'The OS Version for the device you wish to run Browserstack tests on',
       default: process.env.BROWSERSTACK_OS_VERSION
     })
+    .option('idleTimeout', {
+      describe: 'The timeout for browserstack to end the session if the test goes idle.',
+      default: process.env.BROWSERSTACK_IDLE_TIMEOUT || DEFAULT_TIMEOUT
+    })
     .option('verbose', {
       describe: 'Whether to log additional logs from different processes'
     })
@@ -53,6 +59,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
   user,
   device,
   osVersion,
+  idleTimeout,
   verbose
 }) => {
   const packageLocation = path.resolve(process.cwd(), location)
@@ -337,6 +344,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
           'browserstack.user': bs.user,
           'browserstack.key': bs.key,
           'browserstack.networkLogs': true,
+          'browserstack.idleTimeout': idleTimeout,
           project: packageJSON.name,
           build,
           name: packageJSON.name,
