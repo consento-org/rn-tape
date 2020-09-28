@@ -13,6 +13,9 @@ const yargs = require('yargs')
 const mkdirp = require('mkdirp')
 
 const DEFAULT_TIMEOUT = 90
+const MAX_IDLE = 300
+// Ping every couple of minutes to keep the session alive
+const PING_INTERVAL = 2 * 60 * 1000
 
 yargs.command('run <system> [location] [test]', 'Run your package\'s tests in react-natives', (args) => {
   args
@@ -344,20 +347,27 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
           'browserstack.user': bs.user,
           'browserstack.key': bs.key,
           'browserstack.networkLogs': true,
-          'browserstack.idleTimeout': idleTimeout,
+          // There's a max idle time in browserstack, so we shouldn't exceed it
+          'browserstack.idleTimeout': Math.min(idleTimeout || 1, MAX_IDLE),
           project: packageJSON.name,
           build,
           name: packageJSON.name,
           app: appURL
         }
 
-        console.log({ caps })
+        if (verbose) console.log({ caps })
 
         process.on('uncaughtException', _reject)
         driver
           .init(caps)
           .fin(function () {})
           .done()
+
+        if (idleTimeout >= MAX_IDLE) {
+          var idlePinger = setInterval(() => {
+            driver.executeScript('console.log("# Idle Ping")')
+          }, PING_INTERVAL)
+        }
       } else {
         if (android) {
           console.log('## react-native:install')
@@ -376,6 +386,9 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       }
       throw err
     } finally {
+      if (idlePinger) {
+        clearInterval(idlePinger)
+      }
       process.removeListener('uncaughtException', _reject)
       console.log('## driver:quit')
       await driver && driver.quit()
