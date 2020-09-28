@@ -365,7 +365,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
 
         if (idleTimeout >= MAX_IDLE) {
           var idlePinger = setInterval(() => {
-            driver.executeScript('console.log("# Idle Ping")')
+            driver.safeExecute('console.log("# Idle Ping")')
           }, PING_INTERVAL)
         }
       } else {
