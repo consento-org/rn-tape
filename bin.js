@@ -169,7 +169,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // We shouldn't install ourselves
     delete combinedDeps['rn-tape']
 
-    // List all depnendencies of the project so we can install them at the top level
+    // List all dependencies of the project so we can install them at the top level
     const toInstall = Object.keys(combinedDeps).map((name) => {
       const version = combinedDeps[name]
       return `${name}@${version}`
