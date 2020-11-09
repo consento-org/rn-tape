@@ -158,7 +158,7 @@ jobs:
       run: npm test
       if: ${{ matrix.type == 'node' }}
     - name: Run on device
-      run: ./bin run ${{ matrix.system }} ./test
+      run: ./bin.js run ${{ matrix.system }} ./test
       if: ${{ matrix.system }}
       env:
         GITHUB_CONTEXT: ${{ toJson(matrix) }}
