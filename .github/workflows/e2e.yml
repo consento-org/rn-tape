@@ -103,21 +103,21 @@ jobs:
 #            os: ubuntu-latest
 #            type: node
 #            node-version: 8
-          - id: ubuntu:node:10
-            build: true
-            os: ubuntu-latest
-            type: node
-            node-version: 10
-          - id: windows:node:12
-            build: false
-            os: windows-latest
-            type: node
-            node-version: 12
-          - id: macos:node:14
-            build: true
-            os: macos-latest
-            type: node
-            node-version: 14
+#          - id: ubuntu:node:10
+#            build: true
+#            os: ubuntu-latest
+#            type: node
+#            node-version: 10
+#          - id: windows:node:12
+#            build: false
+#            os: windows-latest
+#            type: node
+#            node-version: 12
+#          - id: macos:node:14
+#            build: true
+#            os: macos-latest
+#            type: node
+#            node-version: 14
           - id: rn:android
             build: true
             os: ubuntu-latest
@@ -154,9 +154,6 @@ jobs:
     - name: Login to expo
       run: npx expo-cli login -u ${{ secrets.EXPO_USERNAME }} -p ${{ secrets.EXPO_PASSWORD }}
       if: ${{ matrix.system == 'expo' }}
-    - name: Test in node
-      run: npm test
-      if: ${{ matrix.type == 'node' }}
     - name: Run on device
       run: ./bin.js run ${{ matrix.system }} ./test
       if: ${{ matrix.system }}
