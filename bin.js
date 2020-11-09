@@ -12,6 +12,11 @@ const { writeFile, readFile, unlink } = require('fs').promises
 const yargs = require('yargs')
 const mkdirp = require('mkdirp')
 
+const DEFAULT_TIMEOUT = 90
+const MAX_IDLE = 300
+// Ping every couple of minutes to keep the session alive
+const PING_INTERVAL = 2 * 60 * 1000
+
 yargs.command('run <system> [location] [test]', 'Run your package\'s tests in react-natives', (args) => {
   args
     .positional('system', {
@@ -42,6 +47,10 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       describe: 'The OS Version for the device you wish to run Browserstack tests on',
       default: process.env.BROWSERSTACK_OS_VERSION
     })
+    .option('idleTimeout', {
+      describe: 'The timeout for browserstack to end the session if the test goes idle.',
+      default: process.env.BROWSERSTACK_IDLE_TIMEOUT || DEFAULT_TIMEOUT
+    })
     .option('verbose', {
       describe: 'Whether to log additional logs from different processes'
     })
@@ -53,6 +62,7 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
   user,
   device,
   osVersion,
+  idleTimeout,
   verbose
 }) => {
   const packageLocation = path.resolve(process.cwd(), location)
@@ -126,26 +136,13 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // Install any dependencies of the wrapper app
     await logExec('npm', ['i'], { cwd: root, quiet: !verbose })
 
-    console.log('## react-native:npm pre-pack')
-
-    // Merge devDependencies with dependencies
-    const { dependencies = {}, devDependencies = {} } = packageJSON
-    const combinedDeps = { ...dependencies, ...devDependencies }
-    const modifiedPackageJSON = { ...packageJSON, dependencies: combinedDeps }
-    await writeFile(packageJSONLocation, JSON.stringify(modifiedPackageJSON))
-
     console.log('## react-native:npm pack')
 
-    try {
     // Pack up package
-      await logExec('npm', ['pack'], {
-        cwd: packageLocation,
-        quiet: !verbose
-      })
-    } finally {
-    // Restore old package.json
-      await writeFile(packageJSONLocation, packageRaw)
-    }
+    await logExec('npm', ['pack'], {
+      cwd: packageLocation,
+      quiet: !verbose
+    })
 
     // Get a reference to the tar file
     const tarName = `${packageJSON.name}-${packageJSON.version}.tgz`
@@ -162,6 +159,28 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
     // Delete pack file
       await unlink(tarPath)
     }
+
+    console.log('## react-native:npm install sub-dependencies')
+
+    // Merge devDependencies with dependencies
+    const { dependencies = {}, devDependencies = {} } = packageJSON
+    const combinedDeps = { ...dependencies, ...devDependencies }
+
+    // We shouldn't install ourselves
+    delete combinedDeps['rn-tape']
+
+    // List all dependencies of the project so we can install them at the top level
+    const toInstall = Object.keys(combinedDeps).map((name) => {
+      const version = combinedDeps[name]
+      return `${name}@${version}`
+    })
+
+    // Install dependencies at the top level
+    // This needs to be done for react-native linking to work correctly
+    // Also needs to be done so that any dev dependencies get installed for running tests
+    await logExec('npm', ['i'].concat(toInstall), {
+      cwd: root, quiet: !verbose
+    })
 
     // Start up the local server that will be used to collect logs
     // Logs will be sent in a single HTTP request
@@ -328,19 +347,27 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
           'browserstack.user': bs.user,
           'browserstack.key': bs.key,
           'browserstack.networkLogs': true,
+          // There's a max idle time in browserstack, so we shouldn't exceed it
+          'browserstack.idleTimeout': Math.min(idleTimeout || 1, MAX_IDLE),
           project: packageJSON.name,
           build,
           name: packageJSON.name,
           app: appURL
         }
 
-        console.log({ caps })
+        if (verbose) console.log({ caps })
 
         process.on('uncaughtException', _reject)
         driver
           .init(caps)
           .fin(function () {})
           .done()
+
+        if (idleTimeout >= MAX_IDLE) {
+          var idlePinger = setInterval(() => {
+            driver.safeExecute('console.log("# Idle Ping")')
+          }, PING_INTERVAL)
+        }
       } else {
         if (android) {
           console.log('## react-native:install')
@@ -359,6 +386,9 @@ yargs.command('run <system> [location] [test]', 'Run your package\'s tests in re
       }
       throw err
     } finally {
+      if (idlePinger) {
+        clearInterval(idlePinger)
+      }
       process.removeListener('uncaughtException', _reject)
       console.log('## driver:quit')
       await driver && driver.quit()
