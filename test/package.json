@@ -1,0 +1,32 @@
+{
+  "name": "rn-tape-test",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The test file for rn-tape",
+  "main": "index.js",
+  "scripts": {
+    "lint": "standard --fix",
+    "test": "node test.js",
+    "test-android": "rn-tape run android"
+  },
+  "react-native": {
+    "tape": "fresh-tape"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/consento-org/rn-tape-example.git"
+  },
+  "author": "rangermauve <ranger@mauve.moe> (https://mauve.moe/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/consento-org/rn-tape-example/issues"
+  },
+  "homepage": "https://github.com/consento-org/rn-tape-example#readme",
+  "peerDependencies": {
+    "fresh-tape": "^5.0.4"
+  },
+  "devDependencies": {
+    "standard": "^14.3.4",
+    "tape": "^5.0.1"
+  }
+}

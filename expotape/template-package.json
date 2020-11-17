@@ -8,7 +8,7 @@
     "eject": "expo eject"
   },
   "dependencies": {
-    "expo": "~38.0.8",
+    "expo": "^39.0.0",
     "expo-status-bar": "^1.0.2",
     "fresh-tape": "^5.0.3",
     "react": "~16.11.0",
