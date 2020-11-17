@@ -2,9 +2,9 @@ name: Testing on devices
 
 on:
   push:
-    branches: [ main, unit-tests ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
